@@ -75,6 +75,13 @@ const char SETUP_COPYING[] PROGMEM = "Copying ";
 const char SETUP_PROGMEM_TO_SPIFFS[] PROGMEM = " from PROGMEM to SPIFFS...";
 
 // ===== SERIAL COMMAND LINE INTERFACE ===== //
+const char CLI_ARG_WIDTH[] PROGMEM = "w,width";
+const char CLI_ARG_HEIGHT[] PROGMEM = "h,height";
+const char CLI_ARG_ALL[] PROGMEM = "a,all";
+const char CLI_ARG_SCAN[] PROGMEM = "s,scan";
+const char CLI_ARG_ATTACK[] PROGMEM = "a,attack";
+const char CLI_ARG_SCRIPT[] PROGMEM = "s,script";
+
 const char CLI_SCAN[] PROGMEM = "scan";                          // scan
 const char CLI_REBOOT[] PROGMEM = "reboot";                      // reboot
 const char CLI_STATUS[] PROGMEM = "status";                      // status

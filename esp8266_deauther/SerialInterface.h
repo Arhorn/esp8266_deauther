@@ -76,10 +76,7 @@ class SerialInterface {
     void parameterError(String parameter);
     
   private: 
-    #define BUFFER_SIZE 512
-
     CommandParser* cli;
-    char* serialBuffer;
 
     bool enabled;
     SimpleList<String>* list;

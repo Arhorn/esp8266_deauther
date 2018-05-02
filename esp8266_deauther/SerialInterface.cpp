@@ -15,8 +15,6 @@ SerialInterface::SerialInterface() {
   list = new SimpleList<String>;
 
   cli = new CommandParser();
-  serialBuffer = (char*)malloc(sizeof(serialBuffer)*BUFFER_SIZE);
-  memset(&serialBuffer[0], '\0', BUFFER_SIZE);
   
   cli->onNotFound = [](String cmdName){
    prntln("Command \""+cmdName+"\" not found :(");
@@ -27,7 +25,7 @@ SerialInterface::SerialInterface() {
   };
 
   // ===== HELP ===== //
-  cli->addCommand(new Command("help", [](Command* cmd){
+  cli->addCommand(new Command_P(CLI_HELP, [](Cmd* cmd){
     prntln(CLI_HELP_HEADER);
 
     prntln(CLI_HELP_HELP);
@@ -83,11 +81,11 @@ SerialInterface::SerialInterface() {
 
   // ===== SYSTEM ===== //
   // sysinfo
-  cli->addCommand(new Command("sysinfo", [](Command* cmd){
+  cli->addCommand(new Command_P(CLI_SYSINFO, [](Cmd* cmd){
     prntln(CLI_SYSTEM_INFO);
     char s[150];
-    sprintf(s,str(CLI_SYSTEM_OUTPUT).c_str(), 81920 - system_get_free_heap_size(), 100 - system_get_free_heap_size() / (81920 / 100), system_get_free_heap_size(), system_get_free_heap_size() / (81920 / 100), 81920);
-    prntln(String(s));
+    sprintf_P(s, CLI_SYSTEM_OUTPUT, 81920 - system_get_free_heap_size(), 100 - system_get_free_heap_size() / (81920 / 100), system_get_free_heap_size(), system_get_free_heap_size() / (81920 / 100), 81920);
+    prntln(s);
     
     prnt(CLI_SYSTEM_CHANNEL);
     prntln(settings.getChannel());
@@ -122,20 +120,20 @@ SerialInterface::SerialInterface() {
 
   // ===== REBOOT ===== //
   // reboot
-  cli->addCommand(new Command("reboot",[](Command* cmd){
+  cli->addCommand(new Command_P(CLI_REBOOT,[](Cmd* cmd){
       ESP.reset();
   },NULL));
 
   // ===== CLEAR ===== //
   // clear
-  cli->addCommand(new Command("clear",[](Command* cmd){
+  cli->addCommand(new Command_P(CLI_CLEAR,[](Cmd* cmd){
     for (int i = 0; i < 100; i++) prnt(HASHSIGN);
     for (int i = 0; i < 60; i++) prntln();
   },NULL));
   
   // ===== FORMAT ==== //
   // format
-  cli->addCommand(new Command("format",[](Command* cmd){
+  cli->addCommand(new Command_P(CLI_FORMAT,[](Cmd* cmd){
     prnt(CLI_FORMATTING_SPIFFS);
     SPIFFS.format();
     prntln(SETUP_OK);
@@ -143,19 +141,19 @@ SerialInterface::SerialInterface() {
 
   // ===== RESET ===== //
   // reset
-  cli->addCommand(new Command("reset",[](Command* cmd){
+  cli->addCommand(new Command_P(CLI_RESET,[](Cmd* cmd){
     settings.reset();
   },NULL));
 
   // ====== CHICKEN ===== //
   // chicken
-  cli->addCommand(new Command("chicken",[](Command* cmd){
+  cli->addCommand(new Command_P(CLI_CHICKEN,[](Cmd* cmd){
     prntln(CLI_CHICKEN_OUTPUT);
   },NULL));
     
   // ===== INFO ===== //
   // info
-  cli->addCommand(new Command("info",[](Command* cmd){
+  cli->addCommand(new Command_P(CLI_INFO,[](Cmd* cmd){
     prntln(CLI_INFO_HEADER);
     prnt(CLI_INFO_SOFTWARE);
     prntln(settings.getVersion());
@@ -164,12 +162,12 @@ SerialInterface::SerialInterface() {
     prntln(CLI_INFO_ADDON);
     prntln(CLI_INFO_HEADER);
   },NULL));
-
+  
   // ===== DRAW ===== //
-  // draw [-w <width>] [-h <height>]
-  Command* drawCmd = new Command("draw", [](Command* drawCmd){
-    int width = String(drawCmd->value("width")).toInt();
-    int height = String(drawCmd->value("height")).toInt();
+  // draw [-h <height>] [-w <width>]
+  Cmd* drawCmd = new Command_P(CLI_DRAW, [](Cmd* drawCmd){
+    int width = drawCmd->value(CLI_ARG_WIDTH).toInt();
+    int height = drawCmd->value(CLI_ARG_HEIGHT).toInt();
     double scale = scan.getScaleFactor(height);
     
     prnt(String(DASH) + String(DASH) + String(DASH) + String(DASH) + String(VERTICALBAR)); // ----|
@@ -180,9 +178,9 @@ SerialInterface::SerialInterface() {
     
     for (int i = height; i >= 0; i--) {
       char s[200];
-      if (i == height) sprintf(s,str(CLI_DRAW_OUTPUT).c_str(), scan.getMaxPacket() > (uint32_t)height ? scan.getMaxPacket() : (uint32_t)height);
-      else if (i == height / 2) sprintf(s,str(CLI_DRAW_OUTPUT).c_str(), scan.getMaxPacket() > (uint32_t)height ? scan.getMaxPacket()/2 : (uint32_t)height/2);
-      else if (i == 0) sprintf(s,str(CLI_DRAW_OUTPUT).c_str(), 0);
+      if (i == height) sprintf_P(s,CLI_DRAW_OUTPUT, scan.getMaxPacket() > (uint32_t)height ? scan.getMaxPacket() : (uint32_t)height);
+      else if (i == height / 2) sprintf_P(s,CLI_DRAW_OUTPUT, scan.getMaxPacket() > (uint32_t)height ? scan.getMaxPacket()/2 : (uint32_t)height/2);
+      else if (i == 0) sprintf_P(s,CLI_DRAW_OUTPUT, 0);
       else{
         s[0] = SPACE;
         s[1] = SPACE;
@@ -218,78 +216,78 @@ SerialInterface::SerialInterface() {
       else if(j==SCAN_PACKET_LIST_SIZE/2) sprintf(s,helper.c_str(),SCAN_PACKET_LIST_SIZE/2);
       else if(j==SCAN_PACKET_LIST_SIZE-1) sprintf(s,helper.c_str(),0);
       else{
-        int k;
-        for (k = 0; k < width; k++) s[k] = SPACE;
-        s[k] = ENDOFLINE;
+        for (int k = 0; k < width; k++) s[k] = SPACE;
+        s[width] = ENDOFLINE;
       }
       prnt(s);
     } 
     prntln(VERTICALBAR);
-  }, [](){
-    prntln(String(F("Invalid format. Did you mean \" draw [-w <width>] [-h <height>]\"?")));
+  }, [](uint8_t error){
+    prntln(String(F("Invalid format. Did you mean \" draw [-h <height>] [-w <width>]\"?")));
   });
-  drawCmd->addOptArg("w","width","2");
-  drawCmd->addOptArg("h","height","25");
+  drawCmd->addOptArg_P(CLI_ARG_WIDTH, PSTR("2"));
+  drawCmd->addOptArg_P(CLI_ARG_HEIGHT, PSTR("25"));
   cli->addCommand(drawCmd);
   
   // ===== STOP ===== //
   // stop [<mode: -all, -scan, -attack, -script>]
-  Command* stopCmd = new Command("stop", [&](Command* stopCmd){
+  Cmd* stopCmd = new Command_P(CLI_STOP, [](Cmd* stopCmd){
     led.setMode(LED_MODE_IDLE, true);
     
-    bool hasScan = stopCmd->has("scan");
-    bool hasAttack = stopCmd->has("attack");
-    bool hasScript = stopCmd->has("script");
+    bool hasScan = stopCmd->has_P(CLI_ARG_SCAN);
+    bool hasAttack = stopCmd->has_P(CLI_ARG_ATTACK);
+    bool hasScript = stopCmd->has_P(CLI_ARG_SCRIPT);
     
-    if(stopCmd->has("all") || (!hasScan && !hasAttack && !hasScript)){
+    if(stopCmd->has_P(CLI_ARG_ALL) || (!hasScan && !hasAttack && !hasScript)){
       scan.stop();
       attack.stop();
-      stopScript();
+      //serialInterface.stopScript();
     }else{
       if(hasScan) scan.stop();
       if(hasAttack) attack.stop();
-      if(hasScript) stopScript();
+      //if(hasScript) serialInterface.stopScript();
     }
-  }, [](){
-    prntln("Invalid format. Did you mean \"stop [<mode: -all, -scan, -attack, -script>]\"?");
+  }, [](uint8_t error){
+    prntln(String(F("Invalid format. Did you mean \"stop [<mode: -all, -scan, -attack, -script>]\"?")));
   });
-  stopCmd->addOptArg("all","","");
-  stopCmd->addOptArg("scan","","");
-  stopCmd->addOptArg("attack","","");
-  stopCmd->addOptArg("script","","");
+  stopCmd->addOptArg_P(CLI_ARG_ALL, NULL);
+  stopCmd->addOptArg_P(CLI_ARG_SCAN, NULL);
+  stopCmd->addOptArg_P(CLI_ARG_ATTACK, NULL);
+  stopCmd->addOptArg_P(CLI_ARG_SCRIPT, NULL);
   cli->addCommand(stopCmd);
   
+  /*
   // ===== SCAN ===== //
   // scan [<mode: -ap, -st, -all>] [-t <time>] [-c <continue-time>] [-ch <channel>]
-  Command* scanCmd = new Command("scan", [&](Command* scanCmd){
+  Cmd* scanCmd = new Command_P(CLI_SCAN, [](Cmd* scanCmd){
     uint8_t scanMode = SCAN_MODE_ALL;
     if(scanCmd->has("stations")) scanMode = SCAN_MODE_STATIONS;
     else if(scanCmd->has("accesspoints")) scanMode = SCAN_MODE_APS;
 
-    uint32_t time = getTime(scanCmd->value("time"));
+    uint32_t time = scanCmd->value("time").toInt();//getTime(scanCmd->value("time"));
 
     bool channelHop = !scanCmd->has("channel");
     uint8_t channel = channelHop ? wifi_channel : String(scanCmd->value("channel")).toInt();
     
     uint8_t nextmode = scanCmd->has("continue") ? scanMode : SCAN_MODE_OFF;
-    uint32_t continueTime = getTime(scanCmd->value("continue"));
+    uint32_t continueTime = scanCmd->value("continue").toInt();//getTime(scanCmd->value("continue"));
     
     scan.start(scanMode, time, nextmode, continueTime, channelHop, channel);
-  },[](){
+  },[](uint8_t error){
     prntln(String(F("Invalid format. Did you mean \"scan [<mode: -ap, -st, -all>] [-t <time>] [-c <continue-time>] [-ch <channel>]\"?")));
   });
   
-  scanCmd->addOptArg("a","all","");
-  scanCmd->addOptArg("st","stations","");
-  scanCmd->addOptArg("ap","accesspoints","");
-  scanCmd->addOptArg("t","time","15000");
-  scanCmd->addOptArg("c","continue","10000");
-  scanCmd->addOptArg("ch","channel","1");
+  scanCmd->addOptArg("a,all","");
+  scanCmd->addOptArg("st,stations","");
+  scanCmd->addOptArg("ap,accesspoints","");
+  scanCmd->addOptArg("t,time","15000");
+  scanCmd->addOptArg("c,continue","10000");
+  scanCmd->addOptArg("ch,channel","1");
   cli->addCommand(scanCmd);
 
   // ===== SHOW ===== //
   // show [-s] [<mode: -a, -ap, -st, -n, -ss>]
-  Command* showCmd = new Command("show",[](Command* showCmd){
+  Cmd* showCmd = new Command_P(CLI_SHOW,[](Cmd* showCmd){
     bool hasAP = showCmd->has("ap");
     bool hasSt = showCmd->has("station");
     bool hasName = showCmd->has("name");
@@ -305,20 +303,20 @@ SerialInterface::SerialInterface() {
       if(hasName) selected ? names.printSelected() : names.printAll();
       if(hasSSID && !selected) ssids.printAll();
     }
-  },[](){
+  },[](uint8_t error){
     prntln(String(F("Invalid format. Did you mean \"scan show [-s] [<mode: -a, -ap, -st, -n, -ss>]\"?")));
   });
-  showCmd->addOptArg("s", "selected", "");
-  showCmd->addOptArg("a", "all", "");
-  showCmd->addOptArg("ap", "accesspoint", "");
-  showCmd->addOptArg("st", "station", "");
-  showCmd->addOptArg("n", "name", "");
-  showCmd->addOptArg("ss", "ssid", "");
+  showCmd->addOptArg("s,selected", "");
+  showCmd->addOptArg("a,all", "");
+  showCmd->addOptArg("ap,accesspoint", "");
+  showCmd->addOptArg("st,station", "");
+  showCmd->addOptArg("n,name", "");
+  showCmd->addOptArg("ss,ssid", "");
   cli->addCommand(showCmd);
 
   // ===== SELECT ===== //
   // select [<type: -a, -ap, -st, -n>] [-i <id>]
-  Command* selectCmd = new Command("select", [](Command* selectCmd){
+  Cmd* selectCmd = new Command_P(CLI_SELECT, [](Cmd* selectCmd){
     bool hasAP = selectCmd->has("accesspoint");
     bool hasSt = selectCmd->has("station");
     bool hasName = selectCmd->has("name");
@@ -332,19 +330,19 @@ SerialInterface::SerialInterface() {
       if(hasSt) hasId ? stations.select(idValue) : stations.selectAll();
       if(hasName) hasId ? names.select(idValue) : names.selectAll();
     }
-  }, [](){
+  }, [](uint8_t error){
     prntln(String(F("Invalid format. Did you mean \"select [<type: -a, -ap, -st, -n>] [-i <id>]\"?")));
   });
-  selectCmd->addOptArg("a","all","");
-  selectCmd->addOptArg("ap","accesspoint","");
-  selectCmd->addOptArg("st","station","");
-  selectCmd->addOptArg("n","name","");
-  selectCmd->addOptArg("i","id","0");
+  selectCmd->addOptArg("a,all","");
+  selectCmd->addOptArg("ap,accesspoint","");
+  selectCmd->addOptArg("st,station","");
+  selectCmd->addOptArg("n,name","");
+  selectCmd->addOptArg("i,id","0");
   cli->addCommand(selectCmd);
 
   // ===== DESELECT ===== //
   // deselect [<type: -a, -ap, -st, -n>] [<id>]
-  Command* deselectCmd = new Command("deselect", [](Command* deselectCmd){
+  Cmd* deselectCmd = new Command_P(CLI_DESELECT, [](Cmd* deselectCmd){
     bool hasAP = deselectCmd->has("accesspoint");
     bool hasSt = deselectCmd->has("station");
     bool hasName = deselectCmd->has("name");
@@ -358,26 +356,27 @@ SerialInterface::SerialInterface() {
       if(hasSt) hasId ? stations.deselect(idValue) : stations.deselectAll();
       if(hasName) hasId ? names.deselect(idValue) : names.deselectAll();
     }
-  }, [](){
+  }, [](uint8_t error){
     prntln(String(F("Invalid format. Did you mean \"deselect [<type: -a, -ap, -st, -n>] [<id>]\"?")));
   });
-  deselectCmd->addOptArg("a","all","");
-  deselectCmd->addOptArg("ap","accesspoint","");
-  deselectCmd->addOptArg("st","station","");
-  deselectCmd->addOptArg("n","name","");
-  deselectCmd->addOptArg("i","id","0");
+  deselectCmd->addOptArg("a,all","");
+  deselectCmd->addOptArg("ap,accesspoint","");
+  deselectCmd->addOptArg("st,station","");
+  deselectCmd->addOptArg("n,name","");
+  deselectCmd->addOptArg("i,id","0");
   cli->addCommand(deselectCmd);
 
   // ===== ADD ===== //
   // addssid -name <ssid> [-wpa2] [-cl <clones>] [-f]
-  Command* addssidCmd = new Command("addssid", [](Command* addssidCmd){
+  /*
+  Command* addssidCmd = new Command("addssid", [](Cmd* addssidCmd){
     
-  },[](){
+  },[](uint8_t error){
     
   });
-  addssidCmd->addReqArg("n","name","");
+  addssidCmd->addReqArg("n,name","");
   cli->addCommand(addssidCmd);
-  
+  */
   // clonessid -s [-f]
   
   // clonessid -i <id> [-num <clones>] [-f]
@@ -570,11 +569,10 @@ void SerialInterface::update() {
     loopTime = currentTime;
   } else {
     if (Serial.available()){
-      Serial.readBytesUntil('\n', serialBuffer, BUFFER_SIZE);
+      String tmp = Serial.readStringUntil('\n');
       Serial.print("# ");
-      Serial.println(serialBuffer);
-      cli->parseLines(serialBuffer);
-      memset(&serialBuffer[0], '\0', BUFFER_SIZE);
+      Serial.println(tmp);
+      cli->parse(tmp);
     }
     /*
     if (enabled && Serial.available() > 0)

@@ -45,7 +45,7 @@
 - [`led <r> <g> <b> [<brightness>]`](#led)
 - [`led <#rrggbb> [<brightness>]`](#led)
 - [`led <enable/disable>`](#led)
-- [`draw [-w <width>] [-h <height>]`](#draw)
+- [`draw [-h <height>] [-w <width>]`](#draw)
 - [`startap`](#startap)
 - [`stopap`](#startap)
 - [`screen mode <menu/packetmonitor/buttontest/loading>`](#screen)
@@ -310,7 +310,7 @@ But you can also specify the delay time in seconds directly:
 `delay 1s`.  
 
 ## DRAW
-`draw [-w <width>] [-h <height>]`  
+`draw [-h <height>] [-w <width>]`  
 Draws packet monitor graph.  
 Will only work if you run a wifi scan first, i.e. `scan wifi -t 65s -ch 1`.  
 - **height** (optional, default = 25): Height of the graph in characters.  
